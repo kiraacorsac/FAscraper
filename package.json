@@ -1,0 +1,16 @@
+{
+  "name": "fascraper",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/deamon.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.2",
+    "debug": "~2.6.9",
+    "mongoose": "^5.0.5",
+    "request": "^2.83.0",
+    "request-promise": "^4.2.2",
+    "bluebird": "latest"
+  }
+}
