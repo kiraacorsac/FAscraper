@@ -45,7 +45,7 @@ function stripForThirdPass(datapoint) {
 
 
 function saveLastSubmissions(lastId) {
-    const submissionsToSave = 10;
+    const submissionsToSave = 30;
     let lastSubmissionsSaved = lastId - submissionsToSave;
     let promises = [];
     for (let i = lastId; i > lastSubmissionsSaved; i--) {
@@ -123,7 +123,6 @@ function oneWeekProcessSubmission(datapoint) {
 }
 
 
-
 function repeat() {
     console.log("Scraping front page...");
     let id = frontpage.getLastSubmissionID();
@@ -142,6 +141,8 @@ function repeat() {
                 datapoints.push(oneDayProcessSubmission(dp));
             });
             return Promise.all(datapoints);
+        }).then(() => {
+            return console.log("Updated one day olds.");
         }).catch((err) => {
             console.log("Something wrong with one day stock: " + err);
         }).finally(() => true);
@@ -153,6 +154,8 @@ function repeat() {
                 datapoints.push(oneWeekProcessSubmission(dp));
             });
             return Promise.all(datapoints);
+        }).then(() => {
+            return console.log("Updated one week olds.");
         }).catch((err) => {
             console.log("Something wrong with seven day stock: " + err);
         }).finally(() => true);
