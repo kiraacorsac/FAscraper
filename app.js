@@ -2,6 +2,7 @@ const console = require('console');
 const database = require('./mongoose-storage');
 const frontpage = require('./frontpage-scraper');
 const api = require('./faexport');
+const bluebird = require('bluebird');
 
 function stripUsefulFromSubmission(submission) {
     return {
@@ -10,7 +11,7 @@ function stripUsefulFromSubmission(submission) {
         favorites: submission.favorites,
         gender: submission.gender,
         keywords: submission.keywords,
-        user: getRealUsername(submission),
+        user: submission.profile_name,
         posted_at: submission.posted_at,
         rating: submission.rating,
         species: submission.species,
@@ -34,48 +35,140 @@ function stripUsefulFromUser(user) {
     }
 }
 
-function getRealUsername(submission) {
-    return submission.profile.match(/\/([^\/]+)\/$/).slice(-1)[0];
+function stripForSecondPass(datapoint) {
+    return {}
 }
 
+function stripForThirdPass(datapoint) {
+
+}
+
+
 function saveLastSubmissions(lastId) {
-    let lastSubmissionsSaved = lastId - 30;
+    const submissionsToSave = 10;
+    let lastSubmissionsSaved = lastId - submissionsToSave;
     let promises = [];
     for (let i = lastId; i > lastSubmissionsSaved; i--) {
-        promises.push(processSubmission(i));
+        promises.push(processNewSubmission(i));
     }
     return Promise.all(promises);
 }
 
-function processSubmission(id) {
+function processNewSubmission(id) {
+    console.log("Scraping submission");
     return api.submission(id).then((body) => {
         let submission = JSON.parse(body);
-        let username = getRealUsername(submission);
-        return Promise.all([submission, api.user(username)]);
-    }).then(([submission, userbody]) => {
+        console.log("Scraping user");
+        return Promise.all([api.user(submission.profile_name), submission, id]);
+    }).then(([userbody, submission, id]) => {
         let user = JSON.parse(userbody);
         let datapoint = {};
         Object.assign(datapoint, stripUsefulFromUser(user), stripUsefulFromSubmission(submission));
+        datapoint.submission_id = id;
         console.log("Saving id: " + id);
         return database.saveDatapoint(datapoint);
     })
 }
 
-function repeat() {
-    let id = frontpage.getLastSubmissionID();
-    id.then((lastNumber) => {
-        return saveLastSubmissions(lastNumber);
-    }).then((datapoints) => {
-        console.log("Quittin successfully...");
-    }).catch((err) => {
-        console.log("Something wrong: " + err);
-    }).finally(() => {
-        database.disconnect()
-            .catch((err) => {
-                console.log("Database disconnection foked");
-            });
-    });
+function setup() {
+    return database.connect();
 }
 
+function oneDayProcessSubmission(datapoint) {
+    return Promise.all([api.submission(datapoint.submission_id), api.user(datapoint.user)])
+        .then(([submissionJson, userJson]) => {
+            submission = JSON.parse(submissionJson);
+            user = JSON.parse(userJson);
+
+            datapoint.views_OneDay = submission.views;
+            datapoint.comments_OneDay = submission.comments;
+            datapoint.favorites_OneDay = submission.favorites;
+            datapoint.user_pageviews_OneDay = user.pageviews;
+            datapoint.user_comments_given_OneDay = user.comments_given;
+            datapoint.user_comments_recieved_OneDay = user.comments_received;
+            datapoint.user_favorites_OneDay = user.favorites;
+            datapoint.user_journals_OneDay = user.journals;
+            datapoint.user_submissions_OneDay = user.submissions;
+            datapoint.user_watcher_count_OneDay = user.watchers.count;
+            datapoint.user_watching_count_OneDay = user.watching.count;
+
+            datapoint.queried_OneDay = true;
+
+            return datapoint.save();
+        }).then((datapoint) => console.log(datapoint.submission_id + " modified after 1 day."))
+}
+
+function oneWeekProcessSubmission(datapoint) {
+    return Promise.all([api.submission(datapoint.submission_id), api.user(datapoint.user)])
+        .then(([submissionJson, userJson]) => {
+            submission = JSON.parse(submissionJson);
+            user = JSON.parse(userJson);
+
+            datapoint.views_OneWeek = submission.views;
+            datapoint.comments_OneWeek = submission.comments;
+            datapoint.favorites_OneWeek = submission.favorites;
+            datapoint.user_pageviews_OneWeek = user.pageviews;
+            datapoint.user_comments_given_OneWeek = user.comments_given;
+            datapoint.user_comments_recieved_OneWeek = user.comments_received;
+            datapoint.user_favorites_OneWeek = user.favorites;
+            datapoint.user_journals_OneWeek = user.journals;
+            datapoint.user_submissions_OneWeek = user.submissions;
+            datapoint.user_watcher_count_OneWeek = user.watchers.count;
+            datapoint.user_watching_count_OneWeek = user.watching.count;
+
+            datapoint.queried_OneWeek = true;
+
+            return datapoint.save();
+        }).then((datapoint) => console.log(datapoint.submission_id + " modified after 1 week."))
+}
+
+
+
+function repeat() {
+    console.log("Scraping front page...");
+    let id = frontpage.getLastSubmissionID();
+    let frontpagePromise = id
+        .then((lastNumber) => {
+            console.log("Got front page, getting submissions...");
+            return saveLastSubmissions(lastNumber);
+        }).catch((err) => {
+            console.log("Something wrong with new posts: " + err);
+        }).finally(() => true);
+
+    let oneDayStockPromise = database.oneDayStock()
+        .then((stock) => {
+            let datapoints = [];
+            stock.forEach((dp) => {
+                datapoints.push(oneDayProcessSubmission(dp));
+            });
+            return Promise.all(datapoints);
+        }).catch((err) => {
+            console.log("Something wrong with one day stock: " + err);
+        }).finally(() => true);
+
+    let oneWeekStockPromise = database.oneWeekStock()
+        .then((stock) => {
+            let datapoints = [];
+            stock.forEach((dp) => {
+                datapoints.push(oneWeekProcessSubmission(dp));
+            });
+            return Promise.all(datapoints);
+        }).catch((err) => {
+            console.log("Something wrong with seven day stock: " + err);
+        }).finally(() => true);
+
+    return Promise.all([frontpagePromise, oneDayStockPromise, oneWeekStockPromise])
+        .then(() => {
+            return database.disconnect()
+                .then(() => {
+                    console.log("Database disconnected")
+                })
+                .catch((err) => {
+                    console.log("Database disconnection foked");
+                });
+        })
+}
+
+module.exports.setup = setup;
 module.exports.repeat = repeat;
 
