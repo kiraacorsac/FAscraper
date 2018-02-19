@@ -1,9 +1,10 @@
 const mongoose = require('mongoose');
 mongoose.Promise = require('bluebird');
 const Datapoint = require('./datapoint');
+const secrets = require('./secrets')
 
 function connect() {
-   return mongoose.connect(process.env.ATLAS_FASCRAPE_CS);
+   return mongoose.connect(secrets.cs);
 }
 
 function oneDayStock() {
