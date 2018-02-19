@@ -67,7 +67,7 @@ function processNewSubmission(id) {
         datapoint.submission_id = id;
         console.log("Saving id: " + id);
         return database.saveDatapoint(datapoint);
-    })
+    }).catch((err) => console.log(id + " - new submission failed: " + err));
 }
 
 function setup() {
@@ -96,6 +96,7 @@ function oneDayProcessSubmission(datapoint) {
 
             return datapoint.save();
         }).then((datapoint) => console.log(datapoint.submission_id + " modified after 1 day."))
+        .catch((err) => console.log(id + " - one day stock failed: " + err));
 }
 
 function oneWeekProcessSubmission(datapoint) {
@@ -120,6 +121,7 @@ function oneWeekProcessSubmission(datapoint) {
 
             return datapoint.save();
         }).then((datapoint) => console.log(datapoint.submission_id + " modified after 1 week."))
+        .catch((err) => console.log(id + " - one week stock failed: " + err));
 }
 
 
