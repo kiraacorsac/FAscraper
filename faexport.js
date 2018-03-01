@@ -1,5 +1,5 @@
 const request = require('request-promise');
-const provider = "http://faexport.boothale.net/";
+const provider = "https://faexport.herokuapp.com/";
 
 function pollSubmission(id) {
     return request(provider + `submission/${id}.json`);
