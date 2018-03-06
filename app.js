@@ -129,7 +129,7 @@ function oneWeekProcessSubmission(datapoint) {
 function repeat() {
     let args = minimist(process.argv.slice(2),
         {
-            unknown: ()=>{throw "Bad arguments"},
+            unknown: ()=>{console.log("Bad arguments")},
             boolean: ["dayOld", "weekOld", "new"]
         }
     );
@@ -184,10 +184,10 @@ function repeat() {
                 .then(() => {
                     console.log("Database disconnected")
                 })
-                .catch((err) => {
-                    console.log("Database disconnection foked");
-                });
-        })
+
+        }).catch((err) => {
+            console.log("Database disconnection foked");
+        });
 }
 
 module.exports.setup = setup;
