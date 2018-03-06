@@ -3,6 +3,7 @@ const database = require('./mongoose-storage');
 const frontpage = require('./frontpage-scraper');
 const api = require('./faexport');
 const bluebird = require('bluebird');
+const minimist = require('minimist');
 
 function stripUsefulFromSubmission(submission) {
     return {
@@ -126,43 +127,58 @@ function oneWeekProcessSubmission(datapoint) {
 
 
 function repeat() {
-    console.log("Scraping front page...");
-    let id = frontpage.getLastSubmissionID();
-    let frontpagePromise = id
-        .then((lastNumber) => {
-            console.log("Got front page, getting submissions...");
-            return saveLastSubmissions(lastNumber);
-        }).catch((err) => {
-            console.log("Something wrong with new posts: " + err);
-        }).finally(() => true);
+    let args = minimist(process.argv.slice(2),
+        {
+            unknown: ()=>{throw "Bad arguments"},
+            boolean: ["dayOld", "weekOld", "new"]
+        }
+    );
 
-    let oneDayStockPromise = database.oneDayStock()
-        .then((stock) => {
-            let datapoints = [];
-            stock.forEach((dp) => {
-                datapoints.push(oneDayProcessSubmission(dp));
-            });
-            return Promise.all(datapoints);
-        }).then(() => {
-            return console.log("Updated one day olds.");
-        }).catch((err) => {
-            console.log("Something wrong with one day stock: " + err);
-        }).finally(() => true);
+    let promises = [];
 
-    let oneWeekStockPromise = database.oneWeekStock()
-        .then((stock) => {
-            let datapoints = [];
-            stock.forEach((dp) => {
-                datapoints.push(oneWeekProcessSubmission(dp));
-            });
-            return Promise.all(datapoints);
-        }).then(() => {
-            return console.log("Updated one week olds.");
-        }).catch((err) => {
-            console.log("Something wrong with seven day stock: " + err);
-        }).finally(() => true);
+    if(args.new) {
+        console.log("Scraping front page...");
+        let id = frontpage.getLastSubmissionID();
+        promises.push(id
+            .then((lastNumber) => {
+                console.log("Got front page, getting submissions...");
+                return saveLastSubmissions(lastNumber);
+            }).catch((err) => {
+                console.log("Something wrong with new posts: " + err);
+            }).finally(() => true));
+    }
 
-    return Promise.all([frontpagePromise, oneDayStockPromise, oneWeekStockPromise])
+    if(args.dayOld){
+        promises.push(database.oneDayStock()
+            .then((stock) => {
+                let datapoints = [];
+                stock.forEach((dp) => {
+                    datapoints.push(oneDayProcessSubmission(dp));
+                });
+                return Promise.all(datapoints);
+            }).then(() => {
+                return console.log("Updated one day olds.");
+            }).catch((err) => {
+                console.log("Something wrong with one day stock: " + err);
+            }).finally(() => true))
+    }
+
+    if(args.weekOld){
+        promises.push(database.oneWeekStock()
+            .then((stock) => {
+                let datapoints = [];
+                stock.forEach((dp) => {
+                    datapoints.push(oneWeekProcessSubmission(dp));
+                });
+                return Promise.all(datapoints);
+            }).then(() => {
+                return console.log("Updated one week olds.");
+            }).catch((err) => {
+                console.log("Something wrong with seven day stock: " + err);
+            }).finally(() => true));
+    }
+
+    return Promise.all(promises)
         .then(() => {
             return database.disconnect()
                 .then(() => {

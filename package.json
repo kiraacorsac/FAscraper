@@ -6,11 +6,12 @@
     "start": "node ./bin/deamon.js"
   },
   "dependencies": {
+    "bluebird": "latest",
     "cheerio": "^1.0.0-rc.2",
     "debug": "~2.6.9",
+    "minimist": "^1.2.0",
     "mongoose": "^5.0.5",
     "request": "^2.83.0",
-    "request-promise": "^4.2.2",
-    "bluebird": "latest"
+    "request-promise": "^4.2.2"
   }
 }

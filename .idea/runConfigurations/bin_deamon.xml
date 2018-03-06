@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="bin\deamon" type="NodeJSConfigurationType" factoryName="Node.js" path-to-js-file="bin/deamon.js" working-dir="$PROJECT_DIR$">
+  <configuration default="false" name="bin\deamon" type="NodeJSConfigurationType" factoryName="Node.js" application-parameters="--dayOld --weekOld --new" path-to-js-file="bin/deamon.js" working-dir="$PROJECT_DIR$">
     <envs>
       <env name="DEBUG" value="FAscraper:*" />
     </envs>
